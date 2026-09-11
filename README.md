@@ -2,6 +2,19 @@
 
 A **multi-agent engineering team framework for Claude Code**. It is not an application — there is no API, no database, and no UI in this repository. Instead, it defines a reusable team of Claude Code sub-agents (an architect plus seven specialists) and the "fat skill" knowledge packs they load, so that a single `claude --agent architect` session can plan, delegate, build, test, review, ship, and document a *real* software project on your behalf.
 
+## Used in practice
+
+I use this team for my day-to-day development at work. It drove two production modules on an internal manufacturing platform:
+
+- **Schedule compliance tool** — migrated from a Streamlit prototype to a FastAPI backend and React/Tailwind frontend with Keycloak role-based access. It validates schedules for ~650–700 employees against Philippine (DOLE) labor rules and cut each weekly check from ~2 hours to under 15 minutes.
+- **Scrap declaration module** — built on the same platform, reusing the shared auth, RBAC, and API layer instead of standing up a separate service.
+
+Both went through UAT and change-control approval and are live.
+
+**Why it's built this way:** I started with a single do-it-all agent. On real builds it drifted from what I asked for: it wrote its own to-do list and bypassed rules I had set. So I split the work into specialists that each own one lane. The backend agent only writes FastAPI, and the frontend agent only writes React. They never talk to each other directly, so one lane's mistakes can't leak into the other. Everything goes through the architect, which assembles the parts and shows me the result.
+
+**My part:** the design and approach come from me; the agents implement them. I verify the code, steer the agents back when the output drifts from my design, test what's built, and feed the results back to the architect for the next round.
+
 ## How it fits together
 
 The team follows three rules, defined in [`.claude/TEAM.md`](.claude/TEAM.md) (the source of truth for the roster, conventions, and build order):
@@ -70,8 +83,6 @@ For a feature or build that spans more than one lane, the architect runs roughly
 6. **Ship** — `devops` containerizes, wires CI, and handles the deploy step.
 7. **Docs** — `docs-writer` documents what was actually built, grounded in the code, the contract, and every `*_HANDOFF.md`.
 
-This repository itself has no application code, so steps 2–4 above don't apply to it — this README and the rest of `/docs` were produced directly by `docs-writer` per [`PLAN.md`](PLAN.md).
-
 ## Repo layout
 
 ```
@@ -99,18 +110,18 @@ This repository itself has no application code, so steps 2–4 above don't apply
 │       ├── repo-conventions/SKILL.md
 │       └── contract-first/SKILL.md
 ├── DESIGN.md                    # Design-system spec (see below)
-├── PLAN.md                      # Architect's current plan for this repo's own work
-├── README.md                    # This file
-└── DOCS_HANDOFF.md              # docs-writer's handoff (what's documented, what's not)
+└── README.md                    # This file
 ```
 
 An agent and the skill it loads must live at the **same scope** — both project-local under `.claude/` (as here) or both under the user's `~/.claude/`.
 
-When a real project is built with this team, the build also produces, at the project root: `CONTRACT.md` and `PLAN.md` (architect), and the `*_HANDOFF.md` files for whichever specialists ran (`BACKEND_HANDOFF.md`, `FRONTEND_HANDOFF.md`, `INTEGRATION_HANDOFF.md`, `TEST_REPORT.md`, `DEVOPS_HANDOFF.md`, `DOCS_HANDOFF.md`). None of those except `PLAN.md` and `DOCS_HANDOFF.md` apply to *this* repo, since this repo is the team definition itself, not a built project.
+When a real project is built with this team, the build produces these files at the project root: `CONTRACT.md` and `PLAN.md` (architect), plus the `*_HANDOFF.md` files for whichever specialists ran (`BACKEND_HANDOFF.md`, `FRONTEND_HANDOFF.md`, `INTEGRATION_HANDOFF.md`, `TEST_REPORT.md`, `DEVOPS_HANDOFF.md`, `DOCS_HANDOFF.md`). They aren't included here, because this repo is the team definition itself, not a built project.
 
 ## Design system
 
-[`DESIGN.md`](DESIGN.md) is an included Stripe-style design-system spec — color tokens, typography scale, spacing/elevation/shape tokens, and component specs (buttons, cards, inputs, nav, pills). It is not consumed by anything in this repository today, since there's no UI here. On a real project, if a `design.md` (or equivalent) exists at the project root, `frontend-developer` treats it as **binding** for visual decisions, overriding the `frontend-react-engineer` skill's own defaults wherever the two differ.
+[`DESIGN.md`](DESIGN.md) is an included Stripe-style design-system spec — color tokens, typography scale, spacing/elevation/shape tokens, and component specs (buttons, cards, inputs, nav, pills). It is not consumed by anything in this repository, since there's no UI here. On a real project, if a `design.md` (or equivalent) exists at the project root, `frontend-developer` treats it as **binding** for visual decisions, overriding the `frontend-react-engineer` skill's own defaults wherever the two differ.
+
+<!-- TODO: if DESIGN.md is adapted from a public source, credit it here, e.g. "Adapted from [source](link)." -->
 
 ## How to use it
 
@@ -135,4 +146,3 @@ You can also invoke any specialist directly (e.g. for a single, well-scoped chan
 - [`.claude/agents/`](.claude/agents/) — full role definitions for all eight agents
 - [`.claude/skills/`](.claude/skills/) — the knowledge each agent loads
 - [`DESIGN.md`](DESIGN.md) — the included design-system spec
-- [`DOCS_HANDOFF.md`](DOCS_HANDOFF.md) — current documentation state and any gaps flagged for other agents
